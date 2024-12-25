@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config()
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -30,10 +30,11 @@ async function run() {
   try {
 
     const queryCollection = client.db('queryDB').collection('queries');
+    const recommendCollection = client.db('queryDB').collection('recommendation');
 
     app.post('/queries', async(req, res)=>{
       const query = req.body;
-      console.log(query);
+      // console.log(query);
       const result = await queryCollection.insertOne(query);
       res.send(result);
     })
@@ -43,16 +44,164 @@ async function run() {
     //   res.send(result);
     // })
 
+    //Query APIs
+
     app.get('/queries', async(req, res)=>{
       let query = {};
       const authorEmail = req.query.authorEmail;
-      console.log(req.query?.authorEmail)
+      // console.log(req.query?.authorEmail)
       if(authorEmail){
         query = {authorEmail: authorEmail}
       }
       const result = await queryCollection.find(query).toArray();
       res.send(result);
     })
+
+    app.get('/queries/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await queryCollection.findOne(query);
+      res.send(result);
+    })
+
+    //delete from queries
+    app.delete('/queries/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await queryCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    app.patch('/queries/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = req.body
+      const filter = {_id: new ObjectId(id)};
+      const options = {upsert: true}
+      const updateQuery = {
+        $set: {
+          productName: query.productName,
+          brandName: query.brandName,
+          imageURL: query.imageURL,
+          queryTitle: query.queryTitle,
+          boycott: query.boycott,
+          query: query.query,
+          postedTime: query.postedTime
+        }
+      }
+      const result = await queryCollection.updateOne(filter, updateQuery, options);
+      res.send(result)
+    })
+
+
+
+
+    //Recommendation APIs
+    app.post('/recommendation', async(req, res)=>{
+      const recommendation = req.body;
+      const result = await recommendCollection.insertOne(recommendation);
+
+      const id = recommendation.queryId;
+      const query = {_id: new ObjectId(id)}
+      const targetQuery = await queryCollection.findOne(query);
+      console.log(targetQuery);
+
+      let newCount = 0;
+      if(targetQuery.recommendationCount){
+        newCount = targetQuery.recommendationCount + 1;
+      }
+      else{
+        newCount = 1;
+      }
+
+      //update target Query info
+      const filter = {_id: new ObjectId(id)}
+      const updateQuery = {
+        $set: {
+          recommendationCount: newCount,
+
+        }
+      }
+      const updateResult = await queryCollection.updateOne(filter, updateQuery );
+
+      res.send(result);
+    })
+
+    // get All the Recommendation Data
+    app.get('/allRecommendation', async(req, res)=>{
+      const result = await recommendCollection.find().toArray();
+      res.send(result);
+
+    })
+
+    //get By QueryId
+    app.get('/recommendation/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {queryId: id};
+      const result = await recommendCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    //delete all recommendation related to my query
+    app.delete('/recommendation/:id', async(req, res)=>{
+      const id = req.params.id;
+      console.log(id)
+      const query = {queryId: id};
+      const result = await recommendCollection.deleteMany(query);
+      res.send(result);
+    })
+
+    //Recommendation for me
+    app.get('/recommendation', async(req, res)=>{
+      const userEmail = req.query.userEmail;
+      const query = {userEmail: userEmail}
+      const result = await recommendCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    //Delete Recommendation
+    app.delete('/recommendationForMe/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await recommendCollection.deleteOne(query);
+      res.send(result)
+
+    })
+
+    //Recommendation for me details
+    app.get('/recommendationForMe/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await recommendCollection.findOne(query);
+      res.send(result);
+
+    })
+
+    // My Recommendation
+    app.get('/myRecommendation', async(req, res)=>{
+      const recommenderEmail = req.query.recommenderEmail;
+      const query = {recommenderEmail: recommenderEmail}
+      const result = await recommendCollection.find(query).toArray();
+      res.send(result);
+    })
+
+    //My Recommendation Details
+    app.get('/myRecommendation/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await recommendCollection.findOne(query);
+      res.send(result);
+
+    })
+
+    //Delete from myRecommendation
+    app.delete('/myRecommendation/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await recommendCollection.deleteOne(query);
+      res.send(result)
+
+    })
+
 
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
