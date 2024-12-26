@@ -101,6 +101,11 @@ async function run() {
       if(authorEmail){
         query = {authorEmail: authorEmail}
       }
+
+      if(req.user.email !== req.query.authorEmail){
+        return res.status(403).send({message: 'forbidden access'})
+      }
+
       const result = await queryCollection.find(query).toArray();
       res.send(result);
     })
