@@ -199,9 +199,14 @@ async function run() {
     })
 
     //Recommendation for me
-    app.get('/recommendation', async(req, res)=>{
+    app.get('/recommendation', verifyToken, async(req, res)=>{
       const userEmail = req.query.userEmail;
       const query = {userEmail: userEmail}
+
+      if(req.user.email !== req.query.userEmail){
+        return res.status(403).send({message: 'forbidden access'})
+      }
+
       const result = await recommendCollection.find(query).toArray();
       res.send(result);
     })
