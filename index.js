@@ -21,12 +21,12 @@ app.use(express.json());
 app.use(cookieParser());
 
 const verifyToken = (req, res, next) => {
-  console.log('inside verifyToken middleware');
-  const token = req.cookies?.token;
+  // console.log('inside verifyToken middleware');
+  const token = req?.cookies?.token;
   if (!token) {
     return res.status(401).send({ message: 'Unauthorized access' })
   }
-  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
     if (err) {
       return res.status(401).send({ message: 'Unauthorized Access' })
     }
@@ -72,6 +72,16 @@ async function run() {
         })
         .send({ success: true })
 
+    })
+
+    app.post('/logout', (req, res)=>{
+      res
+      .clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+      })
+      .send({success: true})
     })
 
 
@@ -218,6 +228,10 @@ async function run() {
     app.get('/myRecommendation', verifyToken, async(req, res)=>{
       const recommenderEmail = req.query.recommenderEmail;
       const query = {recommenderEmail: recommenderEmail}
+
+      if(req.user.email !== req.query.email){
+        return res.status(403).send({message: 'forbidden access'})
+      }
 
       const result = await recommendCollection.find(query).toArray();
       res.send(result);
