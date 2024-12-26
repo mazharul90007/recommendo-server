@@ -7,7 +7,14 @@ const port = process.env.PORT || 3000;
 
 
 //middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://recommendo-b1c90.web.app',
+    'https://recommendo-b1c90.firebaseapp.com'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 app.get('/', (req, res)=>{
@@ -32,19 +39,17 @@ async function run() {
     const queryCollection = client.db('queryDB').collection('queries');
     const recommendCollection = client.db('queryDB').collection('recommendation');
 
+
+    
+
+    //Query APIs
+
     app.post('/queries', async(req, res)=>{
       const query = req.body;
       // console.log(query);
       const result = await queryCollection.insertOne(query);
       res.send(result);
     })
-
-    // app.get('/queries', async(req, res)=>{
-    //   const result = await queryCollection.find().toArray();
-    //   res.send(result);
-    // })
-
-    //Query APIs
 
     app.get('/queries', async(req, res)=>{
       let query = {};
@@ -204,9 +209,9 @@ async function run() {
 
 
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
+    // await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
