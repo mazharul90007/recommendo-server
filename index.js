@@ -102,9 +102,9 @@ async function run() {
         query = {authorEmail: authorEmail}
       }
 
-      if(req.user.email !== req.query.authorEmail){
-        return res.status(403).send({message: 'forbidden access'})
-      }
+      // if(req.user.email !== req.query.authorEmail){
+      //   return res.status(403).send({message: 'forbidden access'})
+      // }
 
       const result = await queryCollection.find(query).toArray();
       res.send(result);
@@ -142,6 +142,13 @@ async function run() {
         }
       }
       const result = await queryCollection.updateOne(filter, updateQuery, options);
+      res.send(result)
+    })
+
+    app.get('/queryDetails/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {queryId: id};
+      const result = await recommendCollection.find(query).toArray();
       res.send(result)
     })
 
