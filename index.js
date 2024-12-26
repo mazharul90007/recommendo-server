@@ -229,7 +229,7 @@ async function run() {
       const recommenderEmail = req.query.recommenderEmail;
       const query = {recommenderEmail: recommenderEmail}
 
-      if(req.user.email !== req.query.email){
+      if(req.user.email !== req.query.recommenderEmail){
         return res.status(403).send({message: 'forbidden access'})
       }
 
