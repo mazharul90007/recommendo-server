@@ -1,5 +1,7 @@
 const express = require('express');
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
+const cookieParser = require('cookie-parser');
 require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
@@ -16,6 +18,23 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(cookieParser());
+
+const verifyToken = (req, res, next) => {
+  console.log('inside verifyToken middleware');
+  const token = req.cookies?.token;
+  if (!token) {
+    return res.status(401).send({ message: 'Unauthorized access' })
+  }
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).send({ message: 'Unauthorized Access' })
+    }
+    req.user = decoded;
+    next()
+  })
+  
+}
 
 app.get('/', (req, res)=>{
     res.send('Recommendo is Running....')
@@ -39,8 +58,22 @@ async function run() {
     const queryCollection = client.db('queryDB').collection('queries');
     const recommendCollection = client.db('queryDB').collection('recommendation');
 
+    //Auth Related APIs
+    app.post('/jwt', async (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '5h' });
+      res
+        .cookie('token', token, {
+          httpOnly: true,
+          // secure: false
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
 
-    
+        })
+        .send({ success: true })
+
+    })
+
 
     //Query APIs
 
@@ -182,9 +215,10 @@ async function run() {
     })
 
     // My Recommendation
-    app.get('/myRecommendation', async(req, res)=>{
+    app.get('/myRecommendation', verifyToken, async(req, res)=>{
       const recommenderEmail = req.query.recommenderEmail;
       const query = {recommenderEmail: recommenderEmail}
+
       const result = await recommendCollection.find(query).toArray();
       res.send(result);
     })
